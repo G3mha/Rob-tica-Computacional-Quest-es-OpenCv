@@ -14,8 +14,8 @@ print("OpenCV versão: ", cv2.__version__)
 print("Diretório de trabalho: ", os.getcwd())
 
 # Arquivos necessários
-model = "../../robot202/ros/exemplos202/scripts/MobileNetSSD_deploy.caffemodel"
-proto = "../../robot202/ros/exemplos202/scripts/MobileNetSSD_deploy.prototxt.txt"
+model = os.path.join(os.getcwd(), "MobileNetSSD_deploy.caffemodel")
+proto = os.path.join(os.getcwd(), "MobileNetSSD_deploy.prototxt.txt")
 
 # Baixe o arquivo em https://github.com/Insper/robot20/blob/master/media/cow_wolf.mp4
 video = "cow_wolf.mp4"
@@ -103,6 +103,28 @@ if __name__ == "__main__":
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         saida, resultados = detect(frame)
+        # results.append((CLASSES[idx], confidence*100, (startX, startY),(endX, endY) ))
+        # make a bounding box around the objects identified as wolfs
+        l_wolf = []; l_cow = []
+        for r in resultados:
+            coordinates = [r[2], r[3]]
+            if r[0] == "cow":
+                l_cow.append(coordinates)
+            elif r[0] == "horse" or r[0] == "sheep":
+                l_wolf.append(coordinates)
+        if len(l_wolf) > 0:
+            x_min = min([wolf[0][0] for wolf in l_wolf])
+            y_min = min([wolf[0][1] for wolf in l_wolf])
+            x_max = max([wolf[1][0] for wolf in l_wolf])
+            y_max = max([wolf[1][1] for wolf in l_wolf])
+            cv2.rectangle(saida, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
+            wolf_bounding_box = (x_min, y_min, x_max, y_max)
+            if len(l_cow) > 0:
+                for cow in l_cow:
+                    if cow[0][0] >= wolf_bounding_box[0] and cow[0][1] >= wolf_bounding_box[1] and cow[1][0] <= wolf_bounding_box[2] and cow[1][1] <= wolf_bounding_box[3]:
+                        cv2.putText(saida, "EM PERIGO", (700, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,255), 2)
+                    else:
+                        cv2.putText(saida, "Nao em perigo", (700, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,255), 2)
 
         # NOTE que em testes a OpenCV 4.0 requereu frames em BGR para o cv2.imshow
         cv2.imshow('imagem', saida)
